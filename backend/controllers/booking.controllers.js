@@ -135,7 +135,7 @@ const bookRoom = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Booking must be for at least one night");
     }
 
-    const totalPrice = roomData.pricePerNight * nights;
+    const totalPrice = roomData.pricePerNight * nights * persons;
 
     // Create booking
     const booking = await Booking.create({

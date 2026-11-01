@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { bookingData } from "../assets/assets.js";
 import {
   MapPin,
@@ -10,8 +10,31 @@ import {
   Trash2,
   CheckCircle,
 } from "lucide-react";
+import { AppContext } from "../Context/AppContext.jsx";
+import { toast } from "react-hot-toast";
 
 const MyBookings = () => {
+  const { axios, navigate } = useContext(AppContext);
+  const [bookingData, setBookingData] = useState([]);
+
+  const fetchMyBookings = async () => {
+    try {
+      const { data } = await axios.get("/api/bookings/users");
+      if (data.success) {
+        setBookingData(data.bookings);
+        toast.success(data.message);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
+  useEffect(() => { 
+    fetchMyBookings();
+  },[]);
+
   const getStatusBgColor = (status = "") => {
     switch (status.toLowerCase()) {
       case "confirmed":
@@ -101,14 +124,14 @@ const MyBookings = () => {
                       <div className="md:col-span-4">
                         <div className="flex gap-4">
                           <img
-                            src={booking.room?.images?.[0]}
+                            src={`http://localhost:3000/images/${booking.room?.images?.[0]}`}
                             alt={booking.room?.roomType || "Hotel room"}
                             className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
                           />
 
                           <div className="flex-1 min-w-0">
                             <h3 className="font-semibold text-gray-800 text-lg mb-1">
-                              {booking.hotel?.name || "Hotel"}
+                              {booking.hotel?.hotelName || "Hotel"}
                             </h3>
 
                             <p className="text-blue-600 font-medium mb-1">
@@ -118,7 +141,7 @@ const MyBookings = () => {
                             <div className="flex items-start gap-1 text-gray-500 text-sm mb-1">
                               <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />
                               <span>
-                                {booking.hotel?.address ||
+                                {booking.hotel?.hotelAddress ||
                                   "Address unavailable"}
                               </span>
                             </div>
@@ -126,8 +149,8 @@ const MyBookings = () => {
                             <div className="flex items-center gap-1 text-gray-500 text-sm">
                               <Users className="w-4 h-4" />
                               <span>
-                                {booking.guests ?? 1} Guest
-                                {(booking.guests ?? 1) !== 1 ? "s" : ""}
+                                {booking.persons ?? 1} Guest
+                                {(booking.persons ?? 1) !== 1 ? "s" : ""}
                               </span>
                             </div>
                           </div>
@@ -142,7 +165,7 @@ const MyBookings = () => {
                             <div>
                               <p className="text-sm text-gray-500">Check-in</p>
                               <p className="font-medium text-gray-800">
-                                {formatDate(booking.checkInDate)}
+                                {formatDate(booking.checkIn)}
                               </p>
                             </div>
                           </div>
@@ -152,7 +175,7 @@ const MyBookings = () => {
                             <div>
                               <p className="text-sm text-gray-500">Check-out</p>
                               <p className="font-medium text-gray-800">
-                                {formatDate(booking.checkOutDate)}
+                                {formatDate(booking.checkOut)}
                               </p>
                             </div>
                           </div>
@@ -180,7 +203,7 @@ const MyBookings = () => {
                                 : "bg-red-100 text-red-700"
                             }`}
                           >
-                            {booking.isPaid ? "Paid" : "Unpaid"}
+                            <p>{booking.isPaid ? "Paid" : "Pay Now"}</p>
                           </span>
                         </div>
                       </div>
@@ -193,27 +216,6 @@ const MyBookings = () => {
                           <StatusIcon className="w-4 h-4" />
                           {status}
                         </span>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="md:col-span-1">
-                        <div className="flex gap-2">
-                          {status.toLowerCase() !== "cancelled" && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                window.alert(
-                                  "Connect this button to your booking cancellation API.",
-                                )
-                              }
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Cancel booking"
-                              aria-label="Cancel booking"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
                       </div>
                     </div>
                   </div>
