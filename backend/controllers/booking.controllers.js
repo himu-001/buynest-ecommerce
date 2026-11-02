@@ -5,6 +5,7 @@ import User from "../models/user.models.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { ApiError } from "../utils/apiError.js";
+import transporter from "../config/nodemailer.js";
 
 // Function to check availability of a room
 const checkAvailability = async ({ room, checkInDate, checkOutDate }) => {
@@ -71,6 +72,8 @@ const bookRoom = asyncHandler(async (req, res) => {
     if (!userId) {
         throw new ApiError(401, "User authentication required");
     }
+
+    const user = await User.findById(userId);
 
     const {
         room,
@@ -148,6 +151,28 @@ const bookRoom = asyncHandler(async (req, res) => {
         totalPrice,
         paymentMethod,
     });
+
+    const mailOptions = {
+        from: process.env.SENDER_EMAIL,
+        to: user.email,
+        subject: "Room Booked Successfully",
+        html: `
+        <h1>Hotel Booking Confirmation</h1>
+                <p>Dear ${user.name},</p>
+        <p>Thank you for booking with us. Your booking details are as follows:</p>
+        <ul>
+            <li>Booking ID: ${booking._id}</li>
+            <li>Hotel: ${roomData.hotel.hotelName}</li>
+            <li>Room Type: ${roomData.roomType}</li>    
+            <li>Check-in: ${checkInDate}</li>
+            <li>Check-out: ${checkOutDate}</li>
+            <li>Persons: ${persons}</li>
+            <li>Total Price: $${totalPrice}</li>
+        </ul>
+        `
+    }
+
+    await transporter.sendMail(mailOptions);
 
     return res.status(201).json(
         new ApiResponse(201, booking, "Room booked successfully")
