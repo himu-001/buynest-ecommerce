@@ -8,6 +8,7 @@ import userRouter from "./routes/user.routes.js";
 import hotelRouter from "./routes/hotel.routes.js";
 import roomRouter from "./routes/room.routes.js";
 import bookingRouter from "./routes/booking.routes.js";
+import { errorHandler } from "./middlewares/error.middleware.js";
 
 dotenv.config();
 dns.setServers(["1.1.1.1", "1.0.0.1"]);
@@ -33,7 +34,10 @@ app.use("/images", express.static("uploads"));
 app.use("/api/users", userRouter);
 app.use("/api/hotel", hotelRouter);
 app.use("/api/room", roomRouter);
-app.use("api/bookings", bookingRouter);
+app.use("/api/bookings", bookingRouter);
+
+// error handling middleware
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 

@@ -1,27 +1,27 @@
-import { useContext } from "react";
+import { useContext, useState, useEffect } from "react";
 import { AppContext } from "../../Context/AppContext";
 import { motion } from "motion/react";
 import { MapPin, Star, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
-import { useEffect } from "react";
 
 const AllHotels = () => {
   const { navigate, axios } = useContext(AppContext);
 
   const [hotelData, setHotelData] = useState([]);
 
-  const fetchOwnerHotels = async () => { 
+  const fetchOwnerHotels = async () => {
     try {
       const { data } = await axios.get("/api/hotel/get");
+
       if (data.success) {
-        setHotelData(data.hotels);
+        setHotelData(data.hotels ?? []);
       } else {
         toast.error(data.message);
       }
     } catch (error) {
-        toast.error(error.message);
+      console.error("Error fetching hotels:", error);
     }
-  }
+  };
 
   useEffect(() => {
     fetchOwnerHotels();
@@ -38,9 +38,9 @@ const AllHotels = () => {
         toast.error(data.message);
       }
     } catch (error) {
-        toast.error(error.message);
+      console.error("Error deleting hotel:", error);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6 w-full">
@@ -101,7 +101,7 @@ const AllHotels = () => {
               </thead>
 
               <tbody className="divide-y divide-gray-100">
-                {hotelData.map((hotel, index) => (
+                {(hotelData || []).map((hotel, index) => (
                   <tr
                     key={hotel._id ?? hotel.id ?? index}
                     className={`hover:bg-blue-50 transition-all duration-200 ${
@@ -131,11 +131,11 @@ const AllHotels = () => {
                     </td>
 
                     <td className="py-6 px-6 text-gray-600 text-sm">
-                      {hotel.owner.name || "N/A"}
+                      {hotel.owner?.name || "N/A"}
                     </td>
 
                     <td className="py-6 px-6 text-gray-600 text-sm">
-                      {hotel.owner.contactNumber || "+91 9234567890"}
+                      {hotel.owner?.contactNumber || "+91 9234567890"}
                     </td>
 
                     <td className="py-6 px-6">
@@ -153,8 +153,15 @@ const AllHotels = () => {
 
                     <td className="py-6 px-6">
                       <div className="flex flex-wrap gap-1 min-w-36">
-                        {(hotel.amenities ?? [])
-                          .split(",")
+                        {(Array.isArray(hotel.amenities)
+                          ? hotel.amenities
+                          : typeof hotel.amenities === "string"
+                            ? hotel.amenities.split(",")
+                            : []
+                        )
+                          .map((amenity) => amenity.trim())
+                          .filter(Boolean)
+                          .slice(0, 3)
                           .map((amenity, i) => (
                             <span
                               key={`${amenity}-${i}`}
@@ -163,9 +170,20 @@ const AllHotels = () => {
                               {amenity}
                             </span>
                           ))}
-                        {(hotel.amenities ?? []).length > 3 && (
+
+                        {(Array.isArray(hotel.amenities)
+                          ? hotel.amenities
+                          : typeof hotel.amenities === "string"
+                            ? hotel.amenities.split(",")
+                            : []
+                        ).length > 3 && (
                           <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-                            +{hotel.amenities.length - 3} more
+                            +
+                            {(Array.isArray(hotel.amenities)
+                              ? hotel.amenities
+                              : hotel.amenities.split(",")
+                            ).length - 3}{" "}
+                            more
                           </span>
                         )}
                       </div>

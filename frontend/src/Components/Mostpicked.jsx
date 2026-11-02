@@ -5,7 +5,6 @@ import { motion } from "motion/react";
 const Mostpicked = () => {
 
     const { hotelData } = useContext(AppContext);
-
     return (
         <div className='py-16'>
             <h1 className='text-heading text-3xl font-semibold text-center mx-auto'>
@@ -15,7 +14,7 @@ const Mostpicked = () => {
                 Explore out top-related rooms, loved by guests for comfort and locations
             </p>
             <div className='flex flex-wrap items-center justify-center mt-12 gap-4 max-w-5xl mx-auto'>
-                {hotelData.map((item, index) =>
+                {( hotelData || [] ).map((item, index) =>
                 (
                     <motion.div
                         key={index}

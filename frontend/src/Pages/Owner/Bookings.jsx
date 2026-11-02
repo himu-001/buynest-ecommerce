@@ -1,5 +1,4 @@
 import React, { useContext, useEffect, useState } from "react";
-import { bookingData } from "../assets/assets.js";
 import {
   MapPin,
   Calendar,
@@ -7,27 +6,26 @@ import {
   CreditCard,
   Clock,
   XCircle,
-  Trash2,
   CheckCircle,
 } from "lucide-react";
 import { AppContext } from "../../Context/AppContext.jsx";
 import { toast } from "react-hot-toast";
 
 const Bookings = () => {
-  const { axios, navigate } = useContext(AppContext);
+  const { axios } = useContext(AppContext);
   const [bookingData, setBookingData] = useState([]);
 
   const fetchMyBookings = async () => {
     try {
-      const { data } = await axios.get("/api/bookings/hotel);
+      const { data } = await axios.get("/api/bookings/hotel");
+
       if (data.success) {
-        setBookingData(data.bookings);
-        toast.success(data.message);
+        setBookingData(data.bookings ?? []);
       } else {
         toast.error(data.message);
       }
     } catch (error) {
-      toast.error(error.message);
+      console.error("Error fetching bookings:", error);
     }
   };
 
@@ -103,9 +101,11 @@ const Bookings = () => {
           {bookingData.length === 0 ? (
             <div className="p-12 text-center text-gray-500">
               <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+
               <h2 className="text-xl font-semibold text-gray-800">
                 No bookings yet
               </h2>
+
               <p className="mt-2">Your hotel reservations will appear here.</p>
             </div>
           ) : (
@@ -124,7 +124,11 @@ const Bookings = () => {
                       <div className="md:col-span-4">
                         <div className="flex gap-4">
                           <img
-                            src={`http://localhost:3000/images/${booking.room?.images?.[0]}`}
+                            src={
+                              booking.room?.images?.[0]
+                                ? `http://localhost:3000/images/${booking.room.images[0]}`
+                                : "https://raw.githubusercontent.com/prebuiltui/prebuiltui/main/assets/e-commerce/uploadArea.png"
+                            }
                             alt={booking.room?.roomType || "Hotel room"}
                             className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
                           />
@@ -140,6 +144,7 @@ const Bookings = () => {
 
                             <div className="flex items-start gap-1 text-gray-500 text-sm mb-1">
                               <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />
+
                               <span>
                                 {booking.hotel?.hotelAddress ||
                                   "Address unavailable"}
@@ -148,6 +153,7 @@ const Bookings = () => {
 
                             <div className="flex items-center gap-1 text-gray-500 text-sm">
                               <Users className="w-4 h-4" />
+
                               <span>
                                 {booking.persons ?? 1} Guest
                                 {(booking.persons ?? 1) !== 1 ? "s" : ""}
@@ -162,8 +168,10 @@ const Bookings = () => {
                         <div className="space-y-3">
                           <div className="flex items-start gap-2">
                             <Calendar className="h-4 w-4 text-gray-400 mt-1 flex-shrink-0" />
+
                             <div>
                               <p className="text-sm text-gray-500">Check-in</p>
+
                               <p className="font-medium text-gray-800">
                                 {formatDate(booking.checkIn)}
                               </p>
@@ -172,8 +180,10 @@ const Bookings = () => {
 
                           <div className="flex items-start gap-2">
                             <Calendar className="h-4 w-4 text-gray-400 mt-1 flex-shrink-0" />
+
                             <div>
                               <p className="text-sm text-gray-500">Check-out</p>
+
                               <p className="font-medium text-gray-800">
                                 {formatDate(booking.checkOut)}
                               </p>
@@ -187,6 +197,7 @@ const Bookings = () => {
                         <div className="space-y-2">
                           <div className="flex items-center gap-2 text-gray-600">
                             <CreditCard className="w-4 h-4 text-gray-400" />
+
                             <span className="text-sm">
                               {booking.paymentMethod || "Not specified"}
                             </span>
@@ -203,7 +214,7 @@ const Bookings = () => {
                                 : "bg-red-100 text-red-700"
                             }`}
                           >
-                            <p>{booking.isPaid ? "Paid" : "Pay Now"}</p>
+                            {booking.isPaid ? "Paid" : "Pay Now"}
                           </span>
                         </div>
                       </div>

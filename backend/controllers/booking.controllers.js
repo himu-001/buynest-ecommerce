@@ -182,25 +182,26 @@ const getUserBookings = asyncHandler(async (req, res) => {
 // API to get all bookings for a hotel
 // GET /api/bookings/hotel
 const getHotelBookings = asyncHandler(async (req, res) => {
-    
-    const userId = req.user._id; //id of owner of hotel
+    const userId = req.user._id; // ID of owner of hotel
 
     const hotels = await Hotel.find({ owner: userId }).select("_id");
 
-    if (!hotels.length) {
-        throw new ApiError(404, "No hotels found for this owner");
-    }
-
     const hotelIds = hotels.map((hotel) => hotel._id);
 
-    const booking = await Booking.find({ hotel: { $in: hotelIds } })
+    const bookings = await Booking.find({
+        hotel: { $in: hotelIds },
+    })
         .populate("room")
         .populate("hotel")
         .sort({ createdAt: -1 });
-    
-    if (!booking.lenght === 0) throw new ApiError(404, "No bookings found");
 
-    return res.status(200).json(new ApiResponse(200, booking, "Hotel booking fetched successfully"));
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            bookings,
+            "Hotel bookings fetched successfully"
+        )
+    );
 });
 
 export {

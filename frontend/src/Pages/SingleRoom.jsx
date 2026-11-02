@@ -1,7 +1,6 @@
 import { useContext, useState } from "react";
 import { useParams } from "react-router-dom";
 import { AppContext } from "../Context/AppContext";
-
 import {
   MapPin,
   Star,
@@ -22,17 +21,18 @@ import {
   Eye,
   Building,
   TreePine,
+  Clock,
 } from "lucide-react";
-
 import { toast } from "react-hot-toast";
 
 const SingleRoom = () => {
   const { id } = useParams();
   const { roomData, axios, navigate } = useContext(AppContext);
 
-  const room = roomData.find((r) => r._id === id);
+  const room = roomData?.find((r) => r._id === id);
 
   const [selectedImage, setSelectedImage] = useState(0);
+
   const [bookingData, setBookingData] = useState({
     checkIn: "",
     checkOut: "",
@@ -41,8 +41,26 @@ const SingleRoom = () => {
 
   const [isAvailable, setIsAvailable] = useState(false);
 
+  const getTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
+
   const onChangeHandler = (e) => {
-    setBookingData({ ...bookingData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    setBookingData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    if (name === "checkIn" || name === "checkOut") {
+      setIsAvailable(false);
+    }
   };
 
   const getAmenityIcon = (amenity) => {
@@ -72,16 +90,41 @@ const SingleRoom = () => {
       AirConditioning: Wind,
     };
 
-    return iconMap[amenity] || CheckCircle;
+    return iconMap[amenity.trim()] || CheckCircle;
+  };
+
+  const getAmenities = (amenities) => {
+    if (Array.isArray(amenities)) {
+      return amenities;
+    }
+
+    if (typeof amenities === "string" && amenities.trim()) {
+      return amenities
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+
+    return [];
   };
 
   const checkRoomAvailability = async () => {
-    try {
-      if (bookingData.checkIn >= bookingData.checkOut) {
-        toast.error("Check-out date must be after check-in date");
-        return;
-      }
+    if (!bookingData.checkIn || !bookingData.checkOut) {
+      toast.error("Please select check-in and check-out dates.");
+      return;
+    }
 
+    if (bookingData.checkIn < getTodayDate()) {
+      toast.error("Check-in date cannot be in the past.");
+      return;
+    }
+
+    if (bookingData.checkIn >= bookingData.checkOut) {
+      toast.error("Check-out date must be after check-in date.");
+      return;
+    }
+
+    try {
       const { data } = await axios.post("/api/bookings/check-availability", {
         room: room._id,
         checkInDate: bookingData.checkIn,
@@ -97,38 +140,41 @@ const SingleRoom = () => {
           toast.error("Room is not available");
         }
       } else {
-        toast.error(data.message);
+        setIsAvailable(false);
+        toast.error(data.message || "Could not check availability.");
       }
     } catch (error) {
-      toast.error(error.message);
+      setIsAvailable(false);
+      console.error("Error checking room availability:", error);
     }
   };
 
   const onSubmitHandler = async (e) => {
     e.preventDefault();
 
-    try {
-      if (!isAvailable) {
-        return checkRoomAvailability();
-      } else {
-        const { data } = await axios.post("/api/bookings/book", {
-          room: room._id,
-          checkInDate: bookingData.checkIn,
-          checkOutDate: bookingData.checkOut,
-          persons: bookingData.persons,
-          paymentMethod: "Pay At Hotel",
-        });
+    if (!isAvailable) {
+      await checkRoomAvailability();
+      return;
+    }
 
-        if (data.success) {
-          toast.success(data.message);
-          navigate("/my-bookings");
-          scrollTo(0, 0);
-        } else {
-          toast.error(data.message);
-        }
+    try {
+      const { data } = await axios.post("/api/bookings/book", {
+        room: room._id,
+        checkInDate: bookingData.checkIn,
+        checkOutDate: bookingData.checkOut,
+        persons: Number(bookingData.persons),
+        paymentMethod: "Pay At Hotel",
+      });
+
+      if (data.success) {
+        toast.success(data.message);
+        navigate("/my-bookings");
+        window.scrollTo(0, 0);
+      } else {
+        toast.error(data.message || "Booking failed.");
       }
     } catch (error) {
-      toast.error(error.message);
+      console.error("Error booking room:", error);
     }
   };
 
@@ -139,6 +185,17 @@ const SingleRoom = () => {
       </div>
     );
   }
+
+  const roomImages = Array.isArray(room.images) ? room.images : [];
+  const roomAmenities = getAmenities(room.amenities);
+  const hotelAmenities = getAmenities(room.hotel?.amenities);
+
+  const hotelName = room.hotel?.hotelName || room.hotel?.name || "Hotel";
+
+  const hotelAddress =
+    room.hotel?.hotelAddress || room.hotel?.address || "Not available";
+
+  const ownerName = room.hotel?.owner?.name || room.hotel?.ownerName || "Owner";
 
   return (
     <div className="py-24 min-h-screen bg-gray-50">
@@ -155,9 +212,7 @@ const SingleRoom = () => {
               <div className="flex items-center gap-2 text-gray-600 mt-3">
                 <MapPin className="w-5 h-5" />
 
-                <span>
-                  {room.hotel?.hotelAddress || "Location unavailable"}
-                </span>
+                <span>{hotelAddress}</span>
               </div>
 
               <div className="flex items-center gap-4 mt-4">
@@ -165,7 +220,7 @@ const SingleRoom = () => {
                   <Star className="w-5 h-5 text-yellow-500 fill-current" />
 
                   <span className="font-medium">
-                    {room.hotel?.rating || "N/A"}
+                    {room.hotel?.rating ?? "N/A"}
                   </span>
                 </div>
 
@@ -202,14 +257,12 @@ const SingleRoom = () => {
               <div className="text-gray-600">
                 <div className="flex items-center gap-2 justify-end">
                   <User className="w-4 h-4" />
-
-                  <span>{room.hotel?.owner.name || "Owner"}</span>
+                  <span>{ownerName}</span>
                 </div>
 
                 <div className="flex items-center gap-2 mt-2 justify-end">
                   <Phone className="w-4 h-4" />
-
-                  <span>{room.hotel?.contactNumber || "+893284204"}</span>
+                  <span>{room.hotel?.contactNumber || "Not available"}</span>
                 </div>
               </div>
             </div>
@@ -228,21 +281,27 @@ const SingleRoom = () => {
 
             <div className="lg:col-span-2">
               <div className="w-full aspect-video overflow-hidden rounded-xl bg-gray-100">
-                <img
-                  src={`http://localhost:3000/images/${room.images[selectedImage]}`}
-                  alt={`${room.roomType} - Image ${selectedImage + 1}`}
-                  className="w-full h-full object-cover"
-                />
+                {roomImages.length > 0 ? (
+                  <img
+                    src={`http://localhost:3000/images/${roomImages[selectedImage]}`}
+                    alt={`${room.roomType} - Image ${selectedImage + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-500">
+                    No room images available
+                  </div>
+                )}
               </div>
             </div>
 
             {/* THUMBNAILS */}
 
             <div className="grid grid-cols-2 lg:grid-cols-1 gap-4">
-              {room.images.map((image, index) => (
+              {roomImages.map((image, index) => (
                 <img
                   key={index}
-                  src={`ttp://localhost:3000/images/${image}`}
+                  src={`http://localhost:3000/images/${image}`}
                   alt={`Thumbnail ${index + 1}`}
                   onClick={() => setSelectedImage(index)}
                   className={`h-24 lg:h-28 w-full object-cover rounded-lg cursor-pointer transition-all duration-200 ${
@@ -283,7 +342,7 @@ const SingleRoom = () => {
               </h2>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {room.amenities?.split(",").map((amenity, index) => {
+                {roomAmenities.map((amenity, index) => {
                   const Icon = getAmenityIcon(amenity);
 
                   return (
@@ -310,7 +369,7 @@ const SingleRoom = () => {
               </h2>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {room.hotel?.amenities?.slpit(",").map((amenity, index) => {
+                {hotelAmenities.map((amenity, index) => {
                   const Icon = getAmenityIcon(amenity);
 
                   return (
@@ -341,7 +400,7 @@ const SingleRoom = () => {
                   <p className="text-sm text-gray-500">Hotel Name</p>
 
                   <p className="font-semibold text-gray-800 mt-1">
-                    {room.hotel?.name || "Hotel"}
+                    {hotelName}
                   </p>
                 </div>
 
@@ -349,7 +408,7 @@ const SingleRoom = () => {
                   <p className="text-sm text-gray-500">Owner</p>
 
                   <p className="font-semibold text-gray-800 mt-1">
-                    {room.hotel?.ownerName || "Owner"}
+                    {ownerName}
                   </p>
                 </div>
 
@@ -357,7 +416,7 @@ const SingleRoom = () => {
                   <p className="text-sm text-gray-500">Address</p>
 
                   <p className="font-semibold text-gray-800 mt-1">
-                    {room.hotel?.address || "Not available"}
+                    {hotelAddress}
                   </p>
                 </div>
 
@@ -395,10 +454,12 @@ const SingleRoom = () => {
                   <input
                     type="date"
                     name="checkIn"
-                    min={new Date().toISOString().split("T")[0]} // Prevent past dates
+                    id="checkIn"
+                    min={getTodayDate()}
                     value={bookingData.checkIn}
                     onChange={onChangeHandler}
                     className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
+                    required
                   />
                 </div>
 
@@ -416,13 +477,12 @@ const SingleRoom = () => {
                   <input
                     type="date"
                     name="checkOut"
-                    min={
-                      bookingData.checkIn ||
-                      new Date().toISOString().split("T")[0]
-                    } // Prevent past dates and ensure check-out is after check-in
+                    id="checkOut"
+                    min={bookingData.checkIn || getTodayDate()}
                     value={bookingData.checkOut}
                     onChange={onChangeHandler}
                     className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
+                    required
                   />
                 </div>
 
@@ -430,7 +490,7 @@ const SingleRoom = () => {
 
                 <div className="mb-6">
                   <label
-                    htmlFor="guests"
+                    htmlFor="persons"
                     className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2"
                   >
                     <Users className="w-4 h-4" />
@@ -438,13 +498,15 @@ const SingleRoom = () => {
                   </label>
 
                   <input
-                    name="guests"
+                    id="persons"
+                    name="persons"
                     type="number"
                     min="1"
                     max="10"
                     value={bookingData.persons}
                     onChange={onChangeHandler}
                     className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
+                    required
                   />
                 </div>
 
@@ -464,10 +526,9 @@ const SingleRoom = () => {
 
                 <button
                   type="submit"
-                  className={`w-full py-3 rounded-lg text-white font-medium transition bg-blue-600 hover:bg-blue-700 cursor-pointer
-                  `}
+                  className="w-full py-3 rounded-lg text-white font-medium transition bg-blue-600 hover:bg-blue-700 cursor-pointer"
                 >
-                  {isAvailable ? "Book Now" : "Room Not Available"}
+                  {isAvailable ? "Book Now" : "Check Availability"}
                 </button>
               </form>
             </div>

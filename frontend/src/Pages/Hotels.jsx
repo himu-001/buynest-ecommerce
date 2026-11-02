@@ -11,7 +11,7 @@ const Hotels = () => {
     >
       <h1 className='text-3xl font-semibold text-heading my-8 px-2 text-center'>All Hotels</h1>
       <div className='flex flex-wrap items-center justify-center mt-12 gap-4 max-w-5xl mx-auto'>
-                {hotelData.map((item, index) =>
+                {(hotelData || []).map((item, index) =>
                 (
                     <div
                         key={index}

@@ -15,6 +15,6 @@ const bookingRouter = express.Router();
 bookingRouter.route("/check-availability").post(upload.single("image"), checkRoomAvailability);
 bookingRouter.route("/book").post(verifyJWT, bookRoom);
 bookingRouter.route("/user").get(verifyJWT, getUserBookings);
-bookingRouter.route("/hotel").get(verifyJWT, Owner, deleteHotel);
+bookingRouter.route("/hotel").get(verifyJWT, Owner, getHotelBookings);
 
 export default bookingRouter;

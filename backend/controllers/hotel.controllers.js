@@ -1,7 +1,7 @@
 import Hotel from "../models/hotel.models.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { apiResponse } from "../utils/apiResponse.js";
-import {apiError} from "../utils/apiError.js";
+import {ApiResponse as apiResponse } from "../utils/apiResponse.js";
+import {ApiError as apiError} from "../utils/apiError.js";
 // register a new hotel
 
 const registerHotel = asyncHandler(async (req, res) => { 
@@ -13,7 +13,6 @@ const registerHotel = asyncHandler(async (req, res) => {
     if (!hotelName || !hotelAddress || !rating || !price || !amenities || !image) {
         return apiError(res, 400, "All fields are required");
     }
-    return res.status(201).json(apiResponse(true, "Hotel registered successfully", null));
 
     const newHotel = new Hotel({
         hotelName,
@@ -46,7 +45,7 @@ const deleteHotel = asyncHandler(async (req, res) => {
     const { hotelId } = req.params;
     const deletedHotel = await Hotel.findByIdAndDelete(hotelId);
     if (!deletedHotel) {
-        return apiError(res, 404, "Hotel not found");
+        return new apiError(res, 404, "Hotel not found");
     }
     return res.status(200).json(new apiResponse(true, "Hotel deleted successfully", null));
 });

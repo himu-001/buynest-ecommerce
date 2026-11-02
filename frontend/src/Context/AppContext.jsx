@@ -1,7 +1,6 @@
 import { createContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { hotelsData, roomsData } from "../assets/assets";
-import axios from "axios";
+import axios from "../utils/axios.js";
 axios.defaults.withCredentials = true;
 axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL;
 import { toast } from "react-hot-toast";
