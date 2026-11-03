@@ -14,12 +14,13 @@ const AllHotels = () => {
       const { data } = await axios.get("/api/hotel/get");
 
       if (data.success) {
-        setHotelData(data.hotels ?? []);
+        setHotelData(Array.isArray(data.data) ? data.data : []);
       } else {
         toast.error(data.message);
       }
     } catch (error) {
       console.error("Error fetching hotels:", error);
+      toast.error(error.response?.data?.message || "Failed to fetch hotels");
     }
   };
 

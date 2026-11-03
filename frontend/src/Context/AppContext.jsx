@@ -19,7 +19,7 @@ const AppContextProvider = ({children}) => {
     const checkUserLoginStatus = async () => { 
         try {
             const { data } = await axios.get("/api/users/is-auth");
-            if (data.success) {
+            if (data.data.success || data.success) {
                 setUser(true);
             }
         } catch (error) {
@@ -27,34 +27,34 @@ const AppContextProvider = ({children}) => {
         }
     }
 
-    const fetchHotelsData = async() => {
-        try {
-      const { data } = await axios.get("/api/hotel/get-all");
-      if (data.success) {
-        setHotelData(data.hotels);
-      } else {
-        toast.error(data.message);
-      }
-    } catch (error) {
-        toast.error(error.message);
-    }
-    }
+    const fetchHotelsData = async () => {
+      try {
+        const { data } = await axios.get("/api/hotel/get-all");
 
-    const fetchRoomsData = async() => {
-        try {
-            const { data } = await axios.get("/api/room/get-all");
-            if (data.success) {
-                toast.success(data.message);
-                setRoomData(data.rooms);
-            }
-            else {
-                toast.error(data.message);
-            }
-        } catch (error) {
-            toast.error(error.message);
+        if (data.success || data.data.success) {
+          setHotelData(Array.isArray(data.data) ? data.data : []);
+        } else {
+          toast.error(data.message || data.data.message);
         }
-    }
+      } catch (error) {
+        console.error("Error fetching hotels:", error);
+        toast.error(error.message);
+      }
+    };
+    const fetchRoomsData = async () => {
+      try {
+        const { data } = await axios.get("/api/room/get-all");
 
+        if (data.success || data.data.success   ) {
+          setRoomData(Array.isArray(data.data) ? data.data : []);
+        } else {
+          toast.error(data.message || data.data.message);
+        }
+      } catch (error) {
+        console.error("Error fetching rooms:", error);
+        toast.error(error.message);
+      }
+    };
     useEffect(() => {
         fetchHotelsData();
         fetchRoomsData();

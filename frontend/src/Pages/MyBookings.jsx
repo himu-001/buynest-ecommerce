@@ -10,22 +10,84 @@ import {
 } from "lucide-react";
 import { AppContext } from "../Context/AppContext.jsx";
 import { toast } from "react-hot-toast";
+import PaymentModal from "../Components/PaymentModal.jsx";
 
 const MyBookings = () => {
   const { axios } = useContext(AppContext);
-  const [bookingData, setBookingData] = useState([]);
 
+  const [bookingData, setBookingData] = useState([]);
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Handle payment
+  const handlePayment = async (outcome) => {
+    if (!selectedBooking) return false;
+
+    try {
+      setIsProcessing(true);
+
+      const { data } = await axios.post("/api/bookings/simulate-payment", {
+        bookingId: selectedBooking._id,
+        outcome,
+      });
+
+      if (!data.success) {
+        toast.error(data.message || "Payment failed");
+        return false;
+      }
+
+      const updatedBooking = data.data;
+
+      // Update booking in the list
+      setBookingData((prev) =>
+        prev.map((booking) =>
+          booking._id === updatedBooking._id ? updatedBooking : booking,
+        ),
+      );
+
+      // Update selected booking
+      setSelectedBooking(updatedBooking);
+
+      if (outcome === "success") {
+        toast.success("Payment successful!");
+        setSelectedBooking(null);
+      }
+
+      return true;
+    } catch (error) {
+      console.error("PAYMENT ERROR:", error);
+      console.error("SERVER RESPONSE:", error.response?.data);
+
+      toast.error(error.response?.data?.message || "Payment processing failed");
+
+      return false;
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Fetch user bookings
   const fetchMyBookings = async () => {
     try {
       const { data } = await axios.get("/api/bookings/users");
 
+      console.log("FULL API RESPONSE:", JSON.stringify(data, null, 2));
+
+      // Backend returns a direct array inside data.data
+      const bookings = data.data;
+
+      console.log("BOOKINGS:", bookings);
+
       if (data.success) {
-        setBookingData(data.bookings ?? []);
+        setBookingData(Array.isArray(bookings) ? bookings : []);
       } else {
-        toast.error(data.message || "Failed to fetch bookings.");
+        toast.error(data.message || "Failed to fetch bookings");
       }
     } catch (error) {
-      console.error("Error fetching bookings:", error);
+      console.error("BOOKING API ERROR:", error);
+      console.error("SERVER RESPONSE:", error.response?.data);
+
+      toast.error(error.response?.data?.message || "Failed to fetch bookings");
     }
   };
 
@@ -33,6 +95,7 @@ const MyBookings = () => {
     fetchMyBookings();
   }, []);
 
+  // Status background color
   const getStatusBgColor = (status = "") => {
     switch (status.toLowerCase()) {
       case "confirmed":
@@ -46,6 +109,7 @@ const MyBookings = () => {
     }
   };
 
+  // Status icon
   const getStatusIcon = (status = "") => {
     switch (status.toLowerCase()) {
       case "confirmed":
@@ -59,6 +123,7 @@ const MyBookings = () => {
     }
   };
 
+  // Format dates
   const formatDate = (date) => {
     if (!date) return "—";
 
@@ -66,7 +131,7 @@ const MyBookings = () => {
 
     if (Number.isNaN(parsedDate.getTime())) return "—";
 
-    return parsedDate.toLocaleDateString("en-US", {
+    return parsedDate.toLocaleDateString("en-IN", {
       weekday: "short",
       month: "short",
       day: "numeric",
@@ -113,7 +178,6 @@ const MyBookings = () => {
               {bookingData.map((booking) => {
                 const status = booking.status || "pending";
                 const StatusIcon = getStatusIcon(status);
-
                 const roomImage = booking.room?.images?.[0];
 
                 return (
@@ -206,18 +270,24 @@ const MyBookings = () => {
                           </div>
 
                           <p className="font-bold text-lg text-gray-800">
-                            ₹{booking.totalPrice ?? 0}
+                            $
+                            {Number(booking.totalPrice ?? 0).toLocaleString(
+                              "en-IN",
+                            )}
                           </p>
 
-                          <span
-                            className={`inline-flex px-2 py-1 rounded text-xs font-medium ${
-                              booking.isPaid
-                                ? "bg-green-100 text-green-700"
-                                : "bg-red-100 text-red-700"
-                            }`}
-                          >
-                            {booking.isPaid ? "Paid" : "Pay Now"}
-                          </span>
+                          {booking.isPaid ? (
+                            <span className="inline-flex px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700">
+                              Paid
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => setSelectedBooking(booking)}
+                              className="inline-flex px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 transition"
+                            >
+                              Pay Now
+                            </button>
+                          )}
                         </div>
                       </div>
 
@@ -240,6 +310,14 @@ const MyBookings = () => {
           )}
         </div>
       </div>
+
+      {/* Payment Modal */}
+      <PaymentModal
+        booking={selectedBooking}
+        onPayment={handlePayment}
+        onClose={() => setSelectedBooking(null)}
+        isProcessing={isProcessing}
+      />
     </div>
   );
 };

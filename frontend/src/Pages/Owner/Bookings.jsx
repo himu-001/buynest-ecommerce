@@ -15,17 +15,27 @@ const Bookings = () => {
   const { axios } = useContext(AppContext);
   const [bookingData, setBookingData] = useState([]);
 
+  // Fetch bookings for the owner's hotels
   const fetchMyBookings = async () => {
     try {
       const { data } = await axios.get("/api/bookings/hotel");
 
+      console.log(
+        "OWNER BOOKINGS API RESPONSE:",
+        JSON.stringify(data, null, 2),
+      );
+
       if (data.success) {
-        setBookingData(data.bookings ?? []);
+        // Backend returns a direct array inside data.data
+        setBookingData(Array.isArray(data.data) ? data.data : []);
       } else {
-        toast.error(data.message);
+        toast.error(data.message || "Failed to fetch bookings");
       }
     } catch (error) {
-      console.error("Error fetching bookings:", error);
+      console.error("OWNER BOOKINGS ERROR:", error);
+      console.error("SERVER RESPONSE:", error.response?.data);
+
+      toast.error(error.response?.data?.message || "Failed to fetch bookings");
     }
   };
 
@@ -82,8 +92,8 @@ const Bookings = () => {
           <h1 className="text-4xl font-bold text-gray-800 mb-4">My Bookings</h1>
 
           <p className="text-gray-600 text-lg">
-            Here are your hotel bookings. You can view the details and manage
-            your reservations.
+            Here are the bookings made for your hotels. You can view guest
+            details and reservation information.
           </p>
         </div>
 
@@ -106,7 +116,9 @@ const Bookings = () => {
                 No bookings yet
               </h2>
 
-              <p className="mt-2">Your hotel reservations will appear here.</p>
+              <p className="mt-2">
+                Reservations made for your hotels will appear here.
+              </p>
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
@@ -127,7 +139,7 @@ const Bookings = () => {
                             src={
                               booking.room?.images?.[0]
                                 ? `http://localhost:3000/images/${booking.room.images[0]}`
-                                : "https://raw.githubusercontent.com/prebuiltui/prebuiltui/main/assets/e-commerce/uploadArea.png"
+                                : "https://placehold.co/200x200?text=Room"
                             }
                             alt={booking.room?.roomType || "Hotel room"}
                             className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
@@ -159,6 +171,15 @@ const Bookings = () => {
                                 {(booking.persons ?? 1) !== 1 ? "s" : ""}
                               </span>
                             </div>
+
+                            {/* Guest details */}
+                            <p className="text-sm text-gray-500 mt-1">
+                              Guest: {booking.user?.name || "Unavailable"}
+                            </p>
+
+                            <p className="text-sm text-gray-500">
+                              {booking.user?.email || ""}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -204,7 +225,10 @@ const Bookings = () => {
                           </div>
 
                           <p className="font-bold text-lg text-gray-800">
-                            ${booking.totalPrice ?? 0}
+                            $
+                            {Number(booking.totalPrice ?? 0).toLocaleString(
+                              "en-IN",
+                            )}
                           </p>
 
                           <span
@@ -214,7 +238,7 @@ const Bookings = () => {
                                 : "bg-red-100 text-red-700"
                             }`}
                           >
-                            {booking.isPaid ? "Paid" : "Pay Now"}
+                            {booking.isPaid ? "Paid" : "Unpaid"}
                           </span>
                         </div>
                       </div>
@@ -222,7 +246,9 @@ const Bookings = () => {
                       {/* Status */}
                       <div className="md:col-span-2">
                         <span
-                          className={`inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium capitalize ${getStatusBgColor(status)}`}
+                          className={`inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium capitalize ${getStatusBgColor(
+                            status,
+                          )}`}
                         >
                           <StatusIcon className="w-4 h-4" />
                           {status}

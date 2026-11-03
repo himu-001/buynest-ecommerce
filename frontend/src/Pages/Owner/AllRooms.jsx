@@ -14,7 +14,7 @@ const AllRooms = () => {
       const { data } = await axios.get("/api/room/get");
 
       if (data.success) {
-        setRoomData(data.rooms ?? []);
+        setRoomData(Array.isArray(data.data) ? data.data : []);
       } else {
         toast.error(data.message);
       }

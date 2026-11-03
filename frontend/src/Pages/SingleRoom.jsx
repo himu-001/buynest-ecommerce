@@ -24,6 +24,7 @@ import {
   Clock,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
+import PaymentModal from "../Components/PaymentModal";
 
 const SingleRoom = () => {
   const { id } = useParams();
@@ -40,6 +41,11 @@ const SingleRoom = () => {
   });
 
   const [isAvailable, setIsAvailable] = useState(false);
+
+  // Payment modal states
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [currentBooking, setCurrentBooking] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const getTodayDate = () => {
     const today = new Date();
@@ -152,6 +158,7 @@ const SingleRoom = () => {
   const onSubmitHandler = async (e) => {
     e.preventDefault();
 
+    // Check availability first
     if (!isAvailable) {
       await checkRoomAvailability();
       return;
@@ -163,18 +170,69 @@ const SingleRoom = () => {
         checkInDate: bookingData.checkIn,
         checkOutDate: bookingData.checkOut,
         persons: Number(bookingData.persons),
-        paymentMethod: "Pay At Hotel",
       });
 
       if (data.success) {
-        toast.success(data.message);
-        navigate("/my-bookings");
-        window.scrollTo(0, 0);
+        // Store the newly created booking
+        setCurrentBooking(data.data);
+
+        // Open payment modal
+        setShowPaymentModal(true);
+
+        toast.success("Booking created! Proceed to payment.");
       } else {
         toast.error(data.message || "Booking failed.");
       }
     } catch (error) {
       console.error("Error booking room:", error);
+
+      toast.error(
+        error.response?.data?.message || "Something went wrong while booking.",
+      );
+    }
+  };
+
+  const handlePayment = async (outcome) => {
+    if (!currentBooking?._id) {
+      toast.error("Booking information is missing.");
+      return false;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      const { data } = await axios.post("/api/bookings/simulate-payment", {
+        bookingId: currentBooking._id,
+        outcome,
+      });
+
+      if (data.success) {
+        if (outcome === "success") {
+          toast.success("Payment successful! Your booking is confirmed.");
+
+          setShowPaymentModal(false);
+          navigate("/my-bookings");
+          window.scrollTo(0, 0);
+
+          return true;
+        }
+
+        toast.error("Payment failed. Please try again.");
+        return false;
+      }
+
+      toast.error(data.message || "Payment could not be processed.");
+      return false;
+    } catch (error) {
+      console.error("Payment error:", error);
+
+      toast.error(
+        error.response?.data?.message || "Something went wrong during payment.",
+      );
+
+      return false;
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -535,6 +593,15 @@ const SingleRoom = () => {
           </div>
         </div>
       </div>
+      {/* PAYMENT MODAL */}
+      {showPaymentModal && (
+        <PaymentModal
+          booking={currentBooking}
+          onPayment={handlePayment}
+          onClose={() => setShowPaymentModal(false)}
+          isProcessing={isProcessing}
+        />
+      )}
     </div>
   );
 };

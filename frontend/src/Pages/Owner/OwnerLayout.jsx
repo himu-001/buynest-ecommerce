@@ -30,7 +30,7 @@ const OwnerLayout = () => {
 
   const logout = async () => {
     try {
-      const { data } = await axios.get("/api/users/logout");
+      const { data } = await axios.post("/api/users/logout");
 
       if (data.success) {
         toast.success(data.message);
